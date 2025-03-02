@@ -91,6 +91,45 @@ public class RobotHardware {
         stopMotors();
     }
 
+    public void rotateClockwise(int degrees, double power) {
+    rotate(degrees, power, true);
+}
+
+public void rotateCounterClockwise(int degrees, double power) {
+    rotate(degrees, power, false);
+}
+
+private void rotate(int degrees, double power, boolean clockwise) {
+    resetEncoders();
+
+    double turnCircumference = Math.PI * WHEEL_BASE;
+    double ticksPerDegree = (TICKS_PER_REVOLUTION / wheelCircumference) * turnCircumference / 360.0;
+    int ticks = (int) (ticksPerDegree * degrees);
+
+    if (clockwise) {
+        setTargetPositionsForTurn(ticks, -ticks);
+    } else {
+        setTargetPositionsForTurn(-ticks, ticks);
+    }
+
+    runMotorsToPosition(power);
+
+    ElapsedTime runtime = new ElapsedTime();
+    while (motorsBusy() && runtime.seconds() < 5) {
+        double remaining = Math.abs(frontLeftMotor.getTargetPosition() - frontLeftMotor.getCurrentPosition());
+        double adjustedPower = Math.max(0.2, power * (remaining / ticks));
+
+        frontLeftMotor.setPower(clockwise ? adjustedPower : -adjustedPower);
+        backLeftMotor.setPower(clockwise ? adjustedPower : -adjustedPower);
+        frontRightMotor.setPower(clockwise ? -adjustedPower : adjustedPower);
+        backRightMotor.setPower(clockwise ? -adjustedPower : adjustedPower);
+
+        displayTelemetry(clockwise ? "Rotating Clockwise" : "Rotating Counterclockwise", degrees, ticks);
+    }
+
+    stopMotors();
+}
+
     public void strafe(double inches, boolean right) {
         resetEncoders();
         int ticks = calculateTicks(inches);
