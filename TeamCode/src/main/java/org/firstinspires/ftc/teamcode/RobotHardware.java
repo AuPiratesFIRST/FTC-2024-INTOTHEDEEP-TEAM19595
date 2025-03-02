@@ -26,29 +26,37 @@ public class RobotHardware {
     }
 
     private void initializeMotors(HardwareMap hardwareMap) {
-        backLeftMotor = hardwareMap.get(DcMotor.class, "backLeftMotor");
-        frontLeftMotor = hardwareMap.get(DcMotor.class, "frontLeftMotor");
-        backRightMotor = hardwareMap.get(DcMotor.class, "backRightMotor");
-        frontRightMotor = hardwareMap.get(DcMotor.class, "frontRightMotor");
+        try {
+            backLeftMotor = hardwareMap.get(DcMotor.class, "backLeftMotor");
+            frontLeftMotor = hardwareMap.get(DcMotor.class, "frontLeftMotor");
+            backRightMotor = hardwareMap.get(DcMotor.class, "backRightMotor");
+            frontRightMotor = hardwareMap.get(DcMotor.class, "frontRightMotor");
 
-        frontLeftMotor.setDirection(DcMotor.Direction.REVERSE);
-        backLeftMotor.setDirection(DcMotor.Direction.REVERSE);
-        frontRightMotor.setDirection(DcMotor.Direction.FORWARD);
-        backRightMotor.setDirection(DcMotor.Direction.FORWARD);
+            frontLeftMotor.setDirection(DcMotor.Direction.REVERSE);
+            backLeftMotor.setDirection(DcMotor.Direction.REVERSE);
+            frontRightMotor.setDirection(DcMotor.Direction.FORWARD);
+            backRightMotor.setDirection(DcMotor.Direction.FORWARD);
+
+            resetEncoders();
+        } catch (Exception e) {
+            telemetry.addData("Error", "Motor initialization failed: " + e.getMessage());
+            telemetry.update();
+        }
     }
 
-    public void forwardForDistance(double inches) {
+    public void forwardForDistance(double inches, double power) {
         resetEncoders();
         int ticks = calculateTicks(inches);
         setTargetPositions(ticks);
-        runMotorsToPosition(0.5);
+        runMotorsToPosition(power);
 
         ElapsedTime runtime = new ElapsedTime();
         while (motorsBusy() && runtime.seconds() < 10) {
-            telemetry.addData("Forward", "Target: %d ticks", ticks);
-            telemetry.addData("FL Motor Position", frontLeftMotor.getCurrentPosition());
-            telemetry.addData("FR Motor Position", frontRightMotor.getCurrentPosition());
-            telemetry.update();
+            double remaining = Math.abs(frontLeftMotor.getTargetPosition() - frontLeftMotor.getCurrentPosition());
+            double adjustedPower = Math.max(0.2, power * (remaining / ticks));
+
+            setMotorPowers(adjustedPower);
+            displayTelemetry("Moving Forward", inches, ticks);
         }
 
         stopMotors();
@@ -67,9 +75,42 @@ public class RobotHardware {
 
         runMotorsToPosition(0.5);
 
+        ElapsedTime runtime = new ElapsedTime();
+        while (motorsBusy() && runtime.seconds() < 5) {
+            double remaining = Math.abs(frontLeftMotor.getTargetPosition() - frontLeftMotor.getCurrentPosition());
+            double power = Math.max(0.2, 0.5 * (remaining / ticks));
+
+            frontLeftMotor.setPower(clockwise ? power : -power);
+            backLeftMotor.setPower(clockwise ? power : -power);
+            frontRightMotor.setPower(clockwise ? -power : power);
+            backRightMotor.setPower(clockwise ? -power : power);
+
+            displayTelemetry("Turning", degrees, ticks);
+        }
+
+        stopMotors();
+    }
+
+    public void strafe(double inches, boolean right) {
+        resetEncoders();
+        int ticks = calculateTicks(inches);
+
+        if (right) {
+            frontLeftMotor.setTargetPosition(frontLeftMotor.getCurrentPosition() + ticks);
+            backLeftMotor.setTargetPosition(backLeftMotor.getCurrentPosition() - ticks);
+            frontRightMotor.setTargetPosition(frontRightMotor.getCurrentPosition() - ticks);
+            backRightMotor.setTargetPosition(backRightMotor.getCurrentPosition() + ticks);
+        } else {
+            frontLeftMotor.setTargetPosition(frontLeftMotor.getCurrentPosition() - ticks);
+            backLeftMotor.setTargetPosition(backLeftMotor.getCurrentPosition() + ticks);
+            frontRightMotor.setTargetPosition(frontRightMotor.getCurrentPosition() + ticks);
+            backRightMotor.setTargetPosition(backRightMotor.getCurrentPosition() - ticks);
+        }
+
+        runMotorsToPosition(0.5);
+
         while (motorsBusy()) {
-            telemetry.addData("Turning", "Degrees: %d, Clockwise: %b", degrees, clockwise);
-            telemetry.update();
+            displayTelemetry("Strafing", inches, ticks);
         }
 
         stopMotors();
@@ -99,11 +140,7 @@ public class RobotHardware {
         backLeftMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         frontRightMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         backRightMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-
-        frontLeftMotor.setPower(power);
-        backLeftMotor.setPower(power);
-        frontRightMotor.setPower(power);
-        backRightMotor.setPower(power);
+        setMotorPowers(power);
     }
 
     private void resetEncoders() {
@@ -117,10 +154,23 @@ public class RobotHardware {
         return frontLeftMotor.isBusy() || backLeftMotor.isBusy() || frontRightMotor.isBusy() || backRightMotor.isBusy();
     }
 
+    private void setMotorPowers(double power) {
+        frontLeftMotor.setPower(power);
+        backLeftMotor.setPower(power);
+        frontRightMotor.setPower(power);
+        backRightMotor.setPower(power);
+    }
+
     public void stopMotors() {
-        frontLeftMotor.setPower(0);
-        backLeftMotor.setPower(0);
-        frontRightMotor.setPower(0);
-        backRightMotor.setPower(0);
+        setMotorPowers(0);
+    }
+
+    private void displayTelemetry(String action, double distanceOrAngle, int ticks) {
+        telemetry.addData(action, "Target: %.2f, Ticks: %d", distanceOrAngle, ticks);
+        telemetry.addData("FL", "Pos: %d, Pow: %.2f", frontLeftMotor.getCurrentPosition(), frontLeftMotor.getPower());
+        telemetry.addData("FR", "Pos: %d, Pow: %.2f", frontRightMotor.getCurrentPosition(), frontRightMotor.getPower());
+        telemetry.addData("BL", "Pos: %d, Pow: %.2f", backLeftMotor.getCurrentPosition(), backLeftMotor.getPower());
+        telemetry.addData("BR", "Pos: %d, Pow: %.2f", backRightMotor.getCurrentPosition(), backRightMotor.getPower());
+        telemetry.update();
     }
 }
