@@ -65,9 +65,8 @@ public class AutoWinFull extends LinearOpMode {
     private void moveToTargetZone(double inches) {
         telemetry.addData("Moving", inches + " inches");
         telemetry.update();
-        robotHardware.forwardForDistance(inches); // Assuming this method exists in RobotHardware
+        robotHardware.forwardForDistance(10,10 ); // Assuming this method exists in RobotHardware
     }
-
     /**
      * Stops all motors for safety.
      */
