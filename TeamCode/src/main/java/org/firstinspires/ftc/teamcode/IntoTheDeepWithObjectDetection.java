@@ -39,7 +39,7 @@ public class IntoTheDeepWithObjectDetection extends LinearOpMode {
                 double objectCentroidX = objectDetection.objectDetectionPipeline.getCentroidX();
                 double objectCentroidY = objectDetection.objectDetectionPipeline.getCentroidY();
                 double objectDistance = objectDetection.objectDetectionPipeline.getDistance();
-                double objectWidth = objectDetection.objectDetectionPipeline.getWidth();
+                double objectWidth = objectDetection.objectDetectionPipeline.getObjectWidth();
 
                 // Display object detection info in telemetry
                 telemetry.addData("Object Centroid X", objectCentroidX);

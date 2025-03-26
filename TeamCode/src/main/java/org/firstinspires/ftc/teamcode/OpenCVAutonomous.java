@@ -27,7 +27,7 @@ public class OpenCVAutonomous extends LinearOpMode {
 
         // Autonomous loop
         while (opModeIsActive()) {
-            double detectedWidth = objectDetection.objectDetectionPipeline.getWidth();
+            double detectedWidth = objectDetection.objectDetectionPipeline.getObjectWidth();
             double distance = objectDetection.objectDetectionPipeline.getDistance();
 
             // Use object detection to control the robot

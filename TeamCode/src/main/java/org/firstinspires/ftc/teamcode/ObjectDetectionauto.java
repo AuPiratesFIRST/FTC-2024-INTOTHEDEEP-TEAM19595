@@ -24,7 +24,7 @@ public class ObjectDetectionauto extends LinearOpMode {
             double distance = objectDetection.objectDetectionPipeline.getDistance();
             double centroidX =  objectDetection.objectDetectionPipeline.getCentroidX();
             double centroidY = objectDetection.objectDetectionPipeline.getCentroidY();
-            double objectWidth = objectDetection.objectDetectionPipeline.getWidth();
+            double objectWidth = objectDetection.objectDetectionPipeline.getObjectWidth();
 
             // Display data on the driver station
             telemetry.addData("Object Distance", distance);
